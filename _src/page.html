@@ -1,0 +1,306 @@
+<title>SF Creative Calendar</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=DM+Serif+Display:ital@0;1&family=Hanken+Grotesk:wght@400;500;600&display=swap">
+<style>
+/* Layout: one dark column. Header → tabs (Events / Museums & galleries) → filter bar → picks row → day-grouped event cards.
+   Single committed dark look: near-black ground; every card is lit by a soft glowing gradient wash fading to black. */
+:root{
+  --bg:#08080a; --card:#121115; --card-2:#19181d; --line:#1f1e24; --line-2:#2c2b33;
+  --fg:#efedf2; --muted:#9b97a3; --faint:#625f69;
+  --accent:#d6a3c4; --accent-ink:#140f13;
+  --c-design:#8f88c8; --c-marketing:#bf9a66; --c-art:#c4808f; --c-mixer:#79a99f; --c-women:#ad86b9;
+  --star:#e6c37a;
+  --f-serif:"DM Serif Display", "Didot", Georgia, serif;
+  --f-display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --f-body:"Hanken Grotesk", "Helvetica Neue", system-ui, sans-serif;
+  --f-label:var(--f-body);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{background:var(--bg)}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:10px}
+
+.shell{position:relative;max-width:920px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:36px 72px;display:flex;flex-direction:column;gap:30px}
+.shell::before{content:"";position:absolute;inset:0 0 auto;height:460px;pointer-events:none;z-index:-1;
+  background:radial-gradient(closest-side at 22% 35%,rgba(173,134,185,.10),transparent),radial-gradient(closest-side at 82% 20%,rgba(143,136,200,.06),transparent)}
+
+.label{font-family:var(--f-label);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+
+header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.brand h1{font-family:var(--f-serif);font-weight:400;font-size:clamp(38px,6.6vw,62px);letter-spacing:-.025em;margin:8px 0 0;line-height:.98}
+.brand h1 em{font-style:italic;color:var(--accent)}
+.brand p{margin:10px 0 0;color:var(--muted);font-size:14.5px;max-width:52ch}
+.stamp{font-size:12.5px;color:var(--faint);text-align:right;line-height:1.6}
+.stamp b{color:var(--muted);font-weight:500}
+
+/* Tabs */
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:-14px}
+.tabs button{border:0;background:none;cursor:pointer;padding:10px 4px 12px;margin-right:18px;font-family:var(--f-serif);font-size:22px;letter-spacing:-.015em;color:var(--faint);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button .n{font-family:var(--f-body);font-size:12px;color:var(--faint);margin-left:6px;vertical-align:3px}
+.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+
+/* Filter bar */
+.bar{display:flex;flex-direction:column;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:14px}
+.bar-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.seg{display:flex;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:3px;gap:2px}
+.seg button{border:0;background:none;border-radius:11px;padding:7px 14px;font-size:13px;cursor:pointer;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--card-2);color:var(--fg);box-shadow:inset 0 0 0 1px var(--line-2)}
+.search{flex:1;min-width:180px;border:1px solid var(--line);background:var(--bg);border-radius:14px;padding:9px 14px;font:inherit;font-size:14px;color:var(--fg)}
+.search::placeholder{color:var(--faint)}
+.tog{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:transparent;border-radius:999px;padding:6px 12px 6px 10px;font-size:13px;font-weight:500;color:var(--faint);cursor:pointer}
+.tog .dot{width:7px;height:7px;border-radius:50%;background:var(--faint);opacity:.5}
+.tog .n{color:var(--faint)}
+.tog[aria-pressed="true"]{color:var(--fg);border-color:var(--line-2);background:var(--card-2)}
+.tog[aria-pressed="true"] .dot{background:var(--c,var(--muted));opacity:1}
+.tog[aria-pressed="true"] .n{color:var(--muted)}
+.bar-sep{width:1px;align-self:stretch;background:var(--line);margin:0 4px}
+
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 14px}
+.sec-h h2{font-family:var(--f-serif);font-weight:400;font-size:32px;margin:0;letter-spacing:-.02em;line-height:1}
+.sec-h h2 em{font-style:italic}
+
+/* Picks: dim gradient tiles */
+.picks{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(250px,32%);gap:12px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x mandatory;scrollbar-width:thin;scrollbar-color:var(--card-2) transparent}
+@media (max-width:640px){.picks{grid-auto-columns:78%}}
+.pick{--c:var(--muted);position:relative;overflow:hidden;scroll-snap-align:start;border-radius:24px;padding:18px;display:flex;flex-direction:column;gap:10px;text-decoration:none;min-height:290px;background-clip:padding-box;
+  background:linear-gradient(180deg,rgba(18,17,21,0) 0%,rgba(18,17,21,.35) 30%,rgba(18,17,21,.92) 58%,var(--card) 72%),var(--g,var(--card));border:1px solid var(--line)}
+.pick .cat{color:rgba(255,255,255,.78)}
+.pick:hover{border-color:var(--line-2)}
+.pick .top{display:flex;justify-content:space-between;align-items:center}
+.pick .arrow{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:rgba(0,0,0,.35);color:var(--fg);font-size:14px}
+.pick .t{font-family:var(--f-display);font-weight:600;font-size:21px;line-height:1.18;letter-spacing:-.015em;text-wrap:balance;margin-top:auto}
+.pick .why{font-size:13.5px;color:var(--muted);line-height:1.4}
+.pick .meta{font-size:13px;color:var(--muted);line-height:1.5}
+
+/* Day groups */
+.days{display:flex;flex-direction:column;gap:28px}
+.day-h{display:flex;align-items:baseline;gap:10px;margin:0 0 10px;padding:0 4px}
+.day-h .d{font-family:var(--f-serif);font-weight:400;font-size:26px;line-height:1;letter-spacing:-.015em}
+.day-h .d i{font-style:italic;color:var(--muted)}
+.day-h.today .d{color:var(--accent)}
+.day-list{display:flex;flex-direction:column;gap:8px}
+
+.ev{--c:var(--muted);position:relative;overflow:hidden;display:grid;grid-template-columns:84px minmax(0,1fr) auto;gap:2px 18px;padding:16px 18px 16px 16px;border-radius:22px;border:1px solid var(--line);
+  background:linear-gradient(270deg,rgba(18,17,21,.25) 0%,rgba(18,17,21,.72) 22%,rgba(18,17,21,.97) 44%,var(--card) 56%),var(--gr,var(--card));background-clip:padding-box}
+.ev:hover{border-color:var(--line-2)}
+.ev-title{grid-column:2;font-family:var(--f-display);font-weight:600;font-size:19px;line-height:1.2;letter-spacing:-.015em;text-decoration:none;text-wrap:balance;position:relative}
+.ev-title:hover{color:var(--accent)}
+.ev-sub{grid-column:2;display:flex;flex-wrap:wrap;gap:3px 12px;font-size:13px;color:var(--muted);align-items:center;position:relative}
+.ev-sub{flex-direction:column;align-items:flex-start;gap:2px;margin-top:4px}
+.ev-sub .when{color:var(--fg);opacity:.82;font-weight:500}
+.ev-sub .when .sep{color:var(--faint);margin:0 6px}
+.ev-note{grid-column:2;font-size:13.5px;color:var(--muted);margin-top:2px;max-width:68ch;position:relative}
+.ev-note.pickn{color:var(--fg);opacity:.85}
+.thumb{grid-column:1;grid-row:1/span 4;align-self:start;width:84px;height:84px;border-radius:16px;object-fit:cover;display:block;border:1px solid var(--line);background:var(--g,var(--card-2));position:relative}
+.ev-eye{grid-column:2;display:flex;gap:10px;align-items:center;margin-bottom:4px}
+.ev-side{grid-column:3;grid-row:1/span 4;display:flex;flex-direction:column;align-items:flex-end;gap:8px;position:relative}
+@media (max-width:560px){.ev{grid-template-columns:60px minmax(0,1fr) auto;gap:2px 12px;padding:14px}.thumb{width:60px;height:60px;border-radius:12px}}
+.cat{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
+.src{font-size:12px;color:var(--faint)}
+.star{border:1px solid var(--line);background:var(--card-2);border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:15px;line-height:1;color:var(--faint);display:grid;place-items:center}
+.star[aria-pressed="true"]{color:var(--star);border-color:color-mix(in srgb,var(--star) 35%,transparent)}
+.pickmark{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);border-radius:999px;padding:1px 8px}
+
+/* Hand-check sources */
+.manual{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px}
+.manual .links{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:12px}
+.manual a{display:flex;justify-content:space-between;gap:8px;align-items:center;text-decoration:none;font-size:13.5px;background:var(--card-2);border:1px solid var(--line);border-radius:14px;padding:10px 12px;color:var(--muted)}
+.manual a:hover{color:var(--fg);border-color:var(--line-2)}
+.manual a span{font-size:12px;color:var(--faint)}
+.manual p{font-size:12.5px;color:var(--faint);margin:12px 0 0}
+
+.empty{border:1px dashed var(--line-2);border-radius:20px;padding:30px;color:var(--muted);text-align:center}
+.empty b{display:block;color:var(--fg);font-size:17px;font-weight:600;margin-bottom:6px}
+@media (prefers-reduced-motion:no-preference){.pick,.ev,.ev-title,.tog,.manual a{transition:color .15s,border-color .15s,background-color .15s}}
+</style>
+
+<div class="shell">
+  <header class="top">
+    <div class="brand">
+      <span class="label">San Francisco · next 3 weeks</span>
+      <h1>SF Creative <em>Calendar</em></h1>
+      <p>Design, marketing and art events, the mixers where clients hang out, and what's on at the museums.</p>
+    </div>
+    <div class="stamp" id="stamp">Waiting for this week's list</div>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="Sections">
+    <button role="tab" id="tEvents" aria-selected="true">Events<span class="n" id="nEvents"></span></button>
+    <button role="tab" id="tMuseums" aria-selected="false">Museums &amp; galleries<span class="n" id="nMuseums"></span></button>
+  </div>
+
+  <div class="bar" role="region" aria-label="Filters">
+    <div class="bar-row">
+      <div class="seg" role="group" aria-label="View">
+        <button id="vAll" aria-pressed="true">All</button>
+        <button id="vPicks" aria-pressed="false">Picks</button>
+        <button id="vStar" aria-pressed="false">Starred</button>
+      </div>
+      <input class="search" id="q" type="search" placeholder="Search titles, hosts, venues" aria-label="Search events">
+    </div>
+    <div class="bar-row" id="cats" aria-label="Event types"></div>
+  </div>
+
+  <section id="picksSec" hidden>
+    <div class="sec-h"><h2>Worth the <em>trip</em></h2><span class="label" id="picksCt"></span></div>
+    <div class="picks" id="picks"></div>
+  </section>
+
+  <section>
+    <div class="sec-h"><h2 id="feedH">All events</h2><span class="label" id="feedCt"></span></div>
+    <div class="days" id="feed"><div class="empty"><b>Loading events</b>The list refreshes every Friday morning.</div></div>
+  </section>
+
+  <section class="manual">
+    <span class="label">Check by hand</span>
+    <div class="links">
+      <a href="https://partiful.com" target="_blank" rel="noopener">Partiful invites <span>↗</span></a>
+      <a href="https://www.eventbrite.com/d/ca--san-francisco/marketing--events/" target="_blank" rel="noopener">Eventbrite · marketing <span>↗</span></a>
+      <a href="https://www.eventbrite.com/d/ca--san-francisco/networking/" target="_blank" rel="noopener">Eventbrite · networking <span>↗</span></a>
+      <a href="https://www.eventbrite.com/d/ca--san-francisco/women-in-business/" target="_blank" rel="noopener">Eventbrite · women in business <span>↗</span></a>
+      <a href="https://aigasf.org/events/" target="_blank" rel="noopener">AIGA SF <span>↗</span></a>
+      <a href="https://creativemornings.com/cities/sf" target="_blank" rel="noopener">CreativeMornings SF <span>↗</span></a>
+      <a href="https://naturallybay.org" target="_blank" rel="noopener">Naturally Bay <span>↗</span></a>
+      <a href="https://sfchamber.com/events/" target="_blank" rel="noopener">SF Chamber <span>↗</span></a>
+      <a href="https://cerebralvalley.ai/events" target="_blank" rel="noopener">Cerebral Valley <span>↗</span></a>
+      <a href="https://multimodalsociety.com/events" target="_blank" rel="noopener">Multimodal Society <span>↗</span></a>
+      <a href="https://www.famsf.org/calendar" target="_blank" rel="noopener">de Young &amp; Legion of Honor <span>↗</span></a>
+      <a href="https://www.exploratorium.edu/visit/calendar/after-dark" target="_blank" rel="noopener">Exploratorium After Dark <span>↗</span></a>
+      <a href="https://www.icasf.org/calendar" target="_blank" rel="noopener">ICA San Francisco <span>↗</span></a>
+      <a href="https://www.sfstation.com/art/calendar" target="_blank" rel="noopener">SF Station · gallery openings <span>↗</span></a>
+    </div>
+    <p>Pulled automatically: Luma, Meetup, Letterform Archive, Multimodal Society, Eventbrite's design search, SFMOMA, YBCA, the Asian Art Museum and SF Station. The rest block automated reads.</p>
+  </section>
+</div>
+
+<script>
+const CATS=[["design","Design"],["marketing","Marketing"],["mixer","Client mixers"],["women","Women in biz"]];
+const CATLABEL={design:"Design",marketing:"Marketing",mixer:"Client mixer",women:"Women in biz",art:"Art"};
+const WD=["Sun","Mon","Tues","Wed","Thurs","Fri","Sat"], WDL=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"], MONL=["January","February","March","April","May","June","July","August","September","October","November","December"];
+// Light-tile gradients: one palette per category, a variant per event so neighbours differ.
+const PAL={design:["#9d93e0","#7f8fe0","#c3a8ee","#6f78c9"],marketing:["#f0b27a","#e8907a","#f6d2a6","#d9785f"],
+  art:["#e88a9a","#f0a3a0","#d47aa8","#f2b8b0"],mixer:["#86c2b2","#79a9d0","#a9d2ad","#6fb0c4"],women:["#c99ae0","#eab0d2","#a986e0","#e7a0c0"]};
+function hash(s){let h=2166136261;for(const c of String(s))h=Math.imul(h^c.charCodeAt(0),16777619);return h>>>0}
+function grad(e){const pal=PAL[e.category]||PAL.design,h=hash(e.id||e.title);
+  const c1=pal[h%pal.length],c2=pal[(h>>>3)%pal.length];
+  const hot=c=>`color-mix(in srgb,${c} 62%,#fff)`, dim=(c,n)=>`color-mix(in srgb,${c} ${n}%,#0b0a0d)`;
+  // Every crop gets the same luminous treatment: a whitened hot core, a saturated ring, then a soft fade to black.
+  const looks=[
+    `radial-gradient(95% 70% at 50% 14%,${hot(c1)} 0%,${c1} 26%,${dim(c1,38)} 55%,#0b0a0d 85%)`,
+    `radial-gradient(95% 70% at 50% 88%,${hot(c1)} 0%,${c1} 26%,${dim(c1,35)} 55%,#0b0a0d 85%)`,
+    `radial-gradient(60% 60% at 16% 16%,${hot(c1)} 0%,${c1} 30%,transparent 72%),radial-gradient(60% 60% at 86% 86%,${hot(c2)} 0%,${c2} 30%,transparent 72%),#0b0a0d`,
+    `radial-gradient(140% 55% at 50% 4%,${hot(c1)} 0%,${c1} 28%,${dim(c2,40)} 60%,#0b0a0d 90%)`,
+    `radial-gradient(70% 70% at 50% 50%,${hot(c1)} 0%,${c2} 30%,#0b0a0d 75%)`];
+  return looks[(h>>>6)%looks.length]}
+// Row cards are wide and short, so their glow sits at the left edge at a varied height instead of using the square crops.
+function gradRow(e){const pal=PAL[e.category]||PAL.design,h=hash((e.id||e.title)+"r");
+  const c1=pal[h%pal.length],c2=pal[(h>>>3)%pal.length],y=[0,30,65,100][(h>>>6)%4],x=[100,94,88][(h>>>9)%3];
+  const hot=c=>`color-mix(in srgb,${c} 62%,#fff)`;
+  return (h>>>12)%3===0
+    ? `radial-gradient(28% 120% at ${x}% ${y}%,${hot(c1)} 0%,${c1} 26%,transparent 70%),radial-gradient(22% 100% at ${x-16}% ${100-y}%,${c2} 0%,transparent 70%),#0b0a0d`
+    : `radial-gradient(34% 150% at ${x}% ${y}%,${hot(c1)} 0%,${c1} 24%,color-mix(in srgb,${c1} 30%,#0b0a0d) 52%,transparent 80%),#0b0a0d`}
+const $=s=>document.querySelector(s);
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
+
+let EVENTS=[], META={};
+const st={tab:store.get("tab","events"),view:"all",q:"",cats:new Set(store.get("cats",CATS.map(c=>c[0]))),stars:new Set(store.get("stars",[]))};
+const inTab=e=>(e.category==="art")===(st.tab==="museums");
+const catOk=e=>st.tab==="museums"||st.cats.has(e.category);
+
+const fmt=new Intl.DateTimeFormat("en-US",{timeZone:"America/Los_Angeles",year:"numeric",month:"numeric",day:"numeric",hour:"numeric",minute:"2-digit"});
+function pt(iso){const p={};for(const x of fmt.formatToParts(new Date(iso)))p[x.type]=x.value;
+  const y=+p.year,m=+p.month-1,d=+p.day;const wd=new Date(Date.UTC(y,m,d)).getUTCDay();
+  return{y,m,d,wd,key:`${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`,time:`${p.hour}:${p.minute} ${p.dayPeriod}`.replace(":00 "," ")}}
+const ord=n=>n+((n%100>=11&&n%100<=13)?"th":["th","st","nd","rd"][n%10]||"th");
+const short=p=>`${WD[p.wd]} ${ord(p.d)}`;
+const todayKey=()=>pt(new Date().toISOString()).key;
+const live=()=>{const now=Date.now()-2*3600e3;return EVENTS.filter(e=>new Date(e.end||e.start).getTime()>=now)};
+const catLabel=c=>CATLABEL[c]||c;
+const place=e=>[e.venue&&e.venue!==e.city?e.venue:"",e.city].filter(Boolean).join(", ");
+
+function visible(){const q=st.q.trim().toLowerCase();
+  return live().filter(e=>inTab(e)&&catOk(e)&&(st.view!=="picks"||e.pick)&&(st.view!=="star"||st.stars.has(e.id))&&(!q||`${e.title} ${e.host} ${e.venue} ${e.city}`.toLowerCase().includes(q)))}
+function el(tag,attrs={},...kids){const n=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==="class")n.className=v;else if(k==="text")n.textContent=v;else n.setAttribute(k,v)}for(const c of kids)if(c)n.append(c);return n}
+
+function starBtn(e){const on=st.stars.has(e.id);const b=el("button",{class:"star","aria-label":(on?"Unstar ":"Star ")+e.title,"aria-pressed":String(on),text:on?"★":"☆"});
+  b.onclick=()=>{st.stars.has(e.id)?st.stars.delete(e.id):st.stars.add(e.id);store.set("stars",[...st.stars]);render()};return b}
+
+function renderPicks(){
+  const picks=live().filter(e=>e.pick&&inTab(e)&&catOk(e));
+  $("#picksSec").hidden=!picks.length||st.view!=="all"||!!st.q;
+  $("#picksCt").textContent=picks.length+(picks.length===1?" pick":" picks");const box=$("#picks");box.replaceChildren();
+  for(const e of picks){const p=pt(e.start);
+    const a=el("a",{class:"pick",href:e.url,target:"_blank",rel:"noopener",style:`--c:var(--c-${e.category});--g:${grad(e)}`},
+      el("div",{class:"top"},el("span",{class:"cat",text:catLabel(e.category)}),el("span",{class:"arrow","aria-hidden":"true",text:"↗"})),
+      el("div",{class:"t",text:e.title}),
+      el("div",{class:"why",text:e.note||e.summary||""}),
+      el("div",{class:"meta"},el("div",{text:`${short(p)} • ${p.time}`}),el("div",{text:place(e)})));
+    box.append(a);}
+}
+function renderFeed(){
+  const list=visible(), feed=$("#feed");feed.replaceChildren();
+  $("#feedCt").textContent=list.length+" events";
+  $("#feedH").textContent=st.view==="star"?"Starred":st.view==="picks"?"Picks":st.tab==="museums"?"What's on":"All events";
+  if(!list.length){feed.append(el("div",{class:"empty"},el("b",{text:EVENTS.length?(st.view==="star"?"Nothing starred yet":"Nothing matches"):"No events yet"}),document.createTextNode(EVENTS.length?(st.view==="star"?"Tap the star on an event to save it here.":"Try turning a type back on."):"The list refreshes every Friday morning.")));return}
+  const groups=new Map();for(const e of list){const k=pt(e.start).key;if(!groups.has(k))groups.set(k,[]);groups.get(k).push(e)}
+  const tk=todayKey();
+  for(const[k,evs]of groups){const p=pt(evs[0].start);
+    const head=el("div",{class:"day-h"+(k===tk?" today":"")},el("span",{class:"d"},document.createTextNode(WDL[p.wd]+" "),el("i",{text:ord(p.d)}),k===tk?el("i",{text:" · today"}):null),el("span",{class:"label",text:`${MONL[p.m]} · ${evs.length} ${evs.length===1?"event":"events"}`}));
+    const ul=el("div",{class:"day-list"});
+    for(const e of evs){const q=pt(e.start);
+      const side=el("div",{class:"ev-side"},starBtn(e));
+      const eyebrow=el("div",{class:"ev-eye"},el("span",{class:"cat",text:catLabel(e.category)}),e.pick?el("span",{class:"pickmark",text:"Pick"}):null);
+      const sub=el("div",{class:"ev-sub"},el("span",{class:"when"},document.createTextNode(short(q)),el("span",{class:"sep",text:"•"}),document.createTextNode(q.time+(e.end?" – "+pt(e.end).time:""))),
+        place(e)?el("span",{text:place(e)}):null);
+      const body=e.note||e.summary;
+      const thumb=e.imageId?el("img",{class:"thumb",src:window.STATIC_SITE?`thumbs/${e.id}.jpg`:"/_blob/"+e.imageId,alt:"",loading:"lazy",decoding:"async"}):el("div",{class:"thumb","aria-hidden":"true",style:`--g:${grad(e)}`});
+      ul.append(el("article",{class:"ev",style:`--c:var(--c-${e.category});--gr:${gradRow(e)}`},
+        thumb,eyebrow,side,el("a",{class:"ev-title",href:e.url,target:"_blank",rel:"noopener",text:e.title}),sub,
+        body?el("div",{class:"ev-note"+(e.note?" pickn":""),text:body.length>220?body.slice(0,217)+"…":body}):null));}
+    feed.append(el("div",{},head,ul));}
+}
+function renderFilters(){
+  const L=live().filter(e=>e.category!=="art");
+  $("#cats").hidden=st.tab==="museums";
+  $("#nEvents").textContent=L.length;$("#nMuseums").textContent=live().length-L.length;
+  const mk=(box,items,set,key,count,colored)=>{const b=$(box);b.replaceChildren();for(const[id,label]of items){
+    const t=el("button",{class:"tog","aria-pressed":String(set.has(id)),style:colored?`--c:var(--c-${id})`:""},el("span",{class:"dot"}),document.createTextNode(label),el("span",{class:"n",text:String(L.filter(e=>count(e)===id).length)}));
+    t.onclick=()=>{set.has(id)?set.delete(id):set.add(id);store.set(key,[...set]);render()};b.append(t)}};
+  mk("#cats",CATS,st.cats,"cats",e=>e.category,true);
+}
+function renderStamp(){
+  if(!META.updated){$("#stamp").textContent="Waiting for this week's list";return}
+  const u=pt(META.updated);const nx=new Date(META.updated);nx.setUTCDate(nx.getUTCDate()+((5-u.wd+7)%7||7));const n=pt(nx.toISOString());
+  $("#stamp").replaceChildren(document.createTextNode("Updated "),el("b",{text:`${short(u)} ${MON[u.m]}`}),el("br"),document.createTextNode(`Next refresh ${short(n)} ${MON[n.m]}`));
+}
+function render(){renderStamp();renderFilters();renderPicks();renderFeed();
+  for(const[id,v]of[["#vAll","all"],["#vPicks","picks"],["#vStar","star"]])$(id).setAttribute("aria-pressed",String(st.view===v));
+  $("#tEvents").setAttribute("aria-selected",String(st.tab==="events"));$("#tMuseums").setAttribute("aria-selected",String(st.tab==="museums"))}
+function setTab(t){st.tab=t;store.set("tab",t);render()}
+$("#tEvents").onclick=()=>setTab("events");$("#tMuseums").onclick=()=>setTab("museums");
+
+$("#vAll").onclick=()=>{st.view="all";render()};$("#vPicks").onclick=()=>{st.view="picks";render()};$("#vStar").onclick=()=>{st.view="star";render()};
+$("#q").oninput=e=>{st.q=e.target.value;renderPicks();renderFeed()};
+render();
+
+function load(d){EVENTS=(d&&Array.isArray(d.events)?d.events:[]).slice().sort((a,b)=>a.start.localeCompare(b.start));META={updated:d&&d.updated};render()}
+(async()=>{
+  if(window.STATIC_SITE){
+    try{load(await fetch("feed.json",{cache:"no-cache"}).then(r=>r.json()))}
+    catch{$("#feed").replaceChildren(el("div",{class:"empty"},el("b",{text:"Couldn't load events"}),document.createTextNode("Reload the page to try again.")))}
+    return}
+  const db=window.claude?await window.claude.use("db"):null;
+  if(!db){$("#feed").replaceChildren(el("div",{class:"empty"},el("b",{text:"Sign in to see events"}),document.createTextNode("This list is stored with your Claude account.")));return}
+  db.doc("feed/current").onSnapshot(s=>{
+    const d=s.exists?s.data():null;
+    EVENTS=(d&&Array.isArray(d.events)?d.events:[]).slice().sort((a,b)=>a.start.localeCompare(b.start));
+    META={updated:d&&d.updated};render();
+  },()=>{$("#feed").replaceChildren(el("div",{class:"empty"},el("b",{text:"Couldn't load events"}),document.createTextNode("Reload the page to try again.")))});
+})();
+</script>
